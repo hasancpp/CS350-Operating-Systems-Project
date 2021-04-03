@@ -1,5 +1,7 @@
 #include <linux/init.h>
 #include <linux/module.h>
+#include <linux/usb.h>
+#include <linux/kernel.h>
 MODULE_LICENSE("Dual BSD/GPL");
 
 static struct usb_driver my_usb_driver = {
