@@ -46,4 +46,9 @@ static int my_usb_probe(struct usb_interface *interface, const struct usb_device
     return 0;
 }
 
+static void my_usb_disconnect(struct usb_interface *interface)
+{
+}
+
+
 
