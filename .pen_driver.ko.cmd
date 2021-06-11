@@ -1,0 +1,1 @@
+cmd_/home/alpha/CS350-Operating-Systems-Project/pen_driver.ko := ld -r -m elf_x86_64  -z max-page-size=0x200000  --build-id=sha1  -T ./scripts/module-common.lds -o /home/alpha/CS350-Operating-Systems-Project/pen_driver.ko /home/alpha/CS350-Operating-Systems-Project/pen_driver.o /home/alpha/CS350-Operating-Systems-Project/pen_driver.mod.o;  true

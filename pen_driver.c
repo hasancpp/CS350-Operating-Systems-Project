@@ -5,8 +5,8 @@
 
 MODULE_LICENSE("Dual BSD/GPL");
 
+static struct usb_class_driver pen_class;
 static struct usb_driver pen_driver;
-
 static int __init pen_driver_init(void)
 {
         usb_register(&pen_driver);
@@ -42,7 +42,7 @@ static int pen_driver_probe(struct usb_interface *interface, const struct usb_de
 	printk(KERN_INFO "ID -> bNumEndpoints: %02X\n", interface_desc->desc.bNumEndpoints);
 	printk(KERN_INFO "ID -> bInterfaceClass: %02X\n", interface_desc->desc.bInterfaceClass);
 
-	ret = usb_register_dev(interface, &pen_driver);
+	ret = usb_register_dev(interface, &pen_class);
 	if (ret)
 	{
 		printk(KERN_INFO "Not able to get the minor number");
@@ -59,7 +59,7 @@ static int pen_driver_probe(struct usb_interface *interface, const struct usb_de
 static void pen_driver_disconnect(struct usb_interface *interface)
 {
 	printk(KERN_INFO "Disconnected and release the minor number %d\n", interface->minor);
-	usb_deregister_dev(interface, &pen_driver);
+	usb_deregister_dev(interface, &pen_class);
 }
 
 static struct usb_driver pen_driver = {
