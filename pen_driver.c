@@ -2,61 +2,21 @@
 #include <linux/module.h>
 #include <linux/usb.h>
 #include <linux/kernel.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <fcntl.h>
-#include <string.h>
-#include <stdlib.h>
-
-#define BUF_SIZE 4096
-#define OUTPUT_MODE 0700
 
 MODULE_LICENSE("Dual BSD/GPL");
-
-int i;
-char buf[BUF_SIZE];
-size_t nbytes;
-time_t start;
-
-static void create_write(int arr[]) {
-    int wt_count;
-
-    int create_fd = creat("data.txt", OUTPUT_MODE);
-    if (create_fd < 0) printk(KERN_ALERT "Data file could not be created\n");
-
-    i = 0;
-    while (i < 3) {
-        snprintf(buf, BUF_SIZE, "%d\n", arr[i]);
-        nbytes = strlen(buf);
-
-        wt_count = write(create_fd, buf, nbytes);
-        if (wt_count <= 0) printk(KERN_ALERT "Could not write into the data file\n");
-
-        bzero(buf, BUF_SIZE);
-        ++i;
-    }
-
-    close(create_fd);
-}
 
 static struct usb_driver pen_driver;
 
 static int __init pen_driver_init(void)
 {
-        int ret;
-
-        ret = usb_register(&pen_driver);
-        if (ret < 0) {
-                printk(KERN_ALERT "USB registration failed!");
-                return -1;
-        }
-		printk(KERN_ALERT "USB registration succesful");
+        usb_register(&pen_driver);
+		printk(KERN_ALERT "USB driver module is successfully loaded into kernel. Waiting for the USB to be plugged in...");
         return 0;
 }
 
 static void __exit pen_driver_exit(void)
 {
-	printk(KERN_ALERT "USB module removed from the kernel");	
+	printk(KERN_ALERT "USB driver module is removed from the kernel!");	
 	usb_deregister(&pen_driver);
 }
 
@@ -72,74 +32,34 @@ MODULE_DEVICE_TABLE (usb, pen_table);
 
 static int pen_driver_probe(struct usb_interface *interface, const struct usb_device_id *id)
 {
-	int rd_count, num;
-    FILE* read_fd;
-    char* line;
-    size_t len = 0;
-
-    if (access("data.txt", F_OK) == 0) {
-        read_fd = fopen("data.txt", "r");
-
-        if (read_fd < 0) printk("An error occurred while accessing the data file\n");
-
-        int data[3];
-
-        if (getline(&line, &len, read_fd) == -1) printk(KERN_ALERT "Could not read from the data file\n");
-        num = atoi(line);
-        data[0] = ++num;
-
-        if (getline(&line, &len, read_fd) == -1) printk(KERN_ALERT "Could not read from the data file\n");
-        num = atoi(line);
-        data[1] = num;
-        
-        if (getline(&line, &len, read_fd) == -1) printk(KERN_ALERT "Could not read from the data file\n");
-        num = atoi(line);
-        data[2] = num;
-
-        fclose(read_fd);
-
-        if (remove("data.txt") > 0) printk(KERN_ALERT "The data file couldn't be updated\n");
-
-        create_write(data);
-    } else {
-        int data[3] = {1, 0, 0};
-        create_write(data);
-    }
+	struct usb_host_interface *interface_desc;
+	struct usb_endpoint_descriptor *endpoint;
+	int ret;
 	
-	printk(KERN_ALERT "Usb plugged in");
+	interface_desc = interface->cur_altsetting;
 	
-	start = time(NULL);
-	
+	printk(KERN_INFO "USB info %d now probed: %04X, %04X\n", interface_desc->desc.bInterfaceNumber, id->idVendor, id->idProduct);
+	printk(KERN_INFO "ID -> bNumEndpoints: %02X\n", interface_desc->desc.bNumEndpoints);
+	printk(KERN_INFO "ID -> bInterfaceClass: %02X\n", interface_desc->desc.bInterfaceClass);
+
+	ret = usb_register_dev(interface, &pen_driver);
+	if (ret)
+	{
+		printk(KERN_INFO "Not able to get the minor number");
+		return ret;
+	}
+	else
+	{
+		printk(KERN_INFO "Minor number = %d\n", interface->minor);
+	}
+
     return 0;
 }
 
 static void pen_driver_disconnect(struct usb_interface *interface)
 {
-	read_fd = fopen("data.txt", "r");
-
-    if (read_fd < 0) printk("An error occurred while accessing the data file\n");
-
-    int data[3];
-
-    if (getline(&line, &len, read_fd) == -1) printk(KERN_ALERT "Could not read from the data file\n");
-    num = atoi(line);
-    data[0] = num;
-
-    if (getline(&line, &len, read_fd) == -1) printk(KERN_ALERT "Could not read from the data file\n");
-    num = atoi(line);
-    data[1] = ++num;
-        
-    if (getline(&line, &len, read_fd) == -1) printk(KERN_ALERT "Could not read from the data file\n");
-    num = atoi(line);
-    data[2] = num + (time(NULL) - start);
-
-    fclose(read_fd);
-
-    if (remove("data.txt") > 0) printk(KERN_ALERT "The data file couldn't be updated\n");
-
-    create_write(data);
-	
-	printk(KERN_ALERT "Usb plugged out");
+	printk(KERN_INFO "Disconnected and release the minor number %d\n", interface->minor);
+	usb_deregister_dev(interface, &pen_driver);
 }
 
 static struct usb_driver pen_driver = {
